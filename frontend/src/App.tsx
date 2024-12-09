@@ -1,34 +1,45 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Navbar } from './components/layout/Navbar'
+import { Home } from './pages/Home'
+import { LoginForm } from './components/auth/LoginForm'
+import { RegisterForm } from './components/auth/RegisterForm'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const handleLogin = async (data: { email: string; password: string }) => {
+    console.log('Login:', data)
+    // TODO: 实现登录逻辑
+  }
+
+  const handleRegister = async (data: { username: string; email: string; password: string }) => {
+    console.log('Register:', data)
+    // TODO: 实现注册逻辑
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/login"
+            element={
+              <div className="pt-24">
+                <LoginForm onSubmit={handleLogin} />
+              </div>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <div className="pt-24">
+                <RegisterForm onSubmit={handleRegister} />
+              </div>
+            }
+          />
+        </Routes>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </Router>
   )
 }
 
