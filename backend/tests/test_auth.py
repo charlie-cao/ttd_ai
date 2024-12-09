@@ -1,37 +1,48 @@
 from fastapi.testclient import TestClient
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.database import Base, get_db
+from src import models, auth
 
-# 创建测试数据库
-SQLALCHEMY_DATABASE_URL = "sqlite://"
+@pytest.fixture(scope="function")
+def engine():
+    """为每个测试创建一个新的数据库引擎"""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
+    )
+    return engine
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
-
-@pytest.fixture
-def client():
+@pytest.fixture(scope="function")
+def session_factory(engine):
+    """为每个测试创建一个新的会话工厂"""
     Base.metadata.create_all(bind=engine)
+    yield sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture(scope="function")
+def override_get_db(session_factory):
+    """为每个测试创建一个新的数据库会话"""
+    def _override_get_db():
+        session = session_factory()
+        try:
+            yield session
+        finally:
+            session.close()
+    return _override_get_db
+
+@pytest.fixture(scope="function")
+def client(override_get_db):
+    """为每个测试创建一个新的测试客户端"""
+    app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
-    Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.clear()
 
 def test_register_user(client):
     """测试用户注册"""
@@ -48,7 +59,7 @@ def test_register_user(client):
     assert data["username"] == "testuser"
     assert data["email"] == "test@example.com"
     assert "id" in data
-    assert "password" not in data  # 确保密码没有返回
+    assert "password" not in data
 
 def test_register_duplicate_username(client):
     """测试注册重复用户名"""
@@ -86,13 +97,15 @@ def test_login_success(client):
         }
     )
     
-    # 尝试登录
+    # 登录
     response = client.post(
         "/auth/login",
-        data={  # 使用form数据
+        data={
             "username": "testuser",
-            "password": "testpassword"
-        }
+            "password": "testpassword",
+            "grant_type": "password"
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -111,13 +124,15 @@ def test_login_wrong_password(client):
         }
     )
     
-    # 尝试使用错误密码登录
+    # 使用错误密码登录
     response = client.post(
         "/auth/login",
         data={
             "username": "testuser",
-            "password": "wrongpassword"
-        }
+            "password": "wrongpassword",
+            "grant_type": "password"
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     assert response.status_code == 401
     assert "Incorrect username or password" in response.json()["detail"]
@@ -128,8 +143,10 @@ def test_login_nonexistent_user(client):
         "/auth/login",
         data={
             "username": "nonexistent",
-            "password": "testpassword"
-        }
+            "password": "testpassword",
+            "grant_type": "password"
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     assert response.status_code == 401
     assert "Incorrect username or password" in response.json()["detail"] 

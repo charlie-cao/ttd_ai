@@ -15,16 +15,16 @@ export interface RegisterData {
   password: string;
 }
 
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
 export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-}
-
-export interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
 } 
