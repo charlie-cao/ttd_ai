@@ -1,0 +1,132 @@
+# Todo API 使用说明
+
+## 基本信息
+- API 地址：http://localhost:8000
+- 交互式文档：http://localhost:8000/docs
+
+## 启动服务器
+```bash
+uvicorn src.main:app --reload
+```
+
+## API 认证
+所有的 Todo 相关操作都需要认证。认证流程如下：
+
+1. 注册用户
+POST /auth/register
+Content-Type: application/json
+```json
+{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "testpassword"
+}
+```
+
+2. 登录获取令牌
+POST /auth/login
+Content-Type: application/x-www-form-urlencoded
+```
+username=testuser&password=testpassword
+```
+返回的令牌格式：
+```json
+{
+    "access_token": "your_token_here",
+    "token_type": "bearer"
+}
+```
+
+## Todo API 操作
+
+注意：所有操作都需要在请求头中包含认证信息：
+Authorization: Bearer your_token_here
+
+1. 创建待办事项
+POST /todos/
+```json
+{
+    "title": "买牛奶",
+    "completed": false
+}
+```
+
+2. 获取所有待办事项
+GET /todos/
+
+3. 获取单个待办事项
+GET /todos/{todo_id}
+
+4. 更新待办事项
+PUT /todos/{todo_id}
+```json
+{
+    "title": "买全脂���奶",
+    "completed": true
+}
+```
+
+5. 删除待办事项
+DELETE /todos/{todo_id}
+
+## 响应状态码
+- 200: 操作成功
+- 201: 创建成功
+- 204: 删除成功
+- 401: 未认证
+- 403: 无权限
+- 404: 资源不存在
+
+## 安全说明
+- 每个用户只能访问自己的待办事项
+- 密码会经过加密后存储
+- 使用 JWT 令牌进行认证
+- 令牌有效期为 30 分钟
+
+## 使用示例（Windows PowerShell）
+
+1. 注册用户：
+```powershell
+$body = @{
+    username = "testuser"
+    email = "test@example.com"
+    password = "testpassword"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8000/auth/register" -Method Post -Body $body -ContentType "application/json"
+```
+
+2. 登录：
+```powershell
+$form = @{
+    username = "testuser"
+    password = "testpassword"
+}
+
+$response = Invoke-RestMethod -Uri "http://localhost:8000/auth/login" -Method Post -Form $form
+$token = $response.access_token
+```
+
+3. 创建待办事项：
+```powershell
+$headers = @{
+    Authorization = "Bearer $token"
+}
+
+$body = @{
+    title = "买牛奶"
+    completed = $false
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8000/todos/" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+```
+
+4. 获取所有待办事项：
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/todos/" -Method Get -Headers $headers
+```
+
+## 提示
+- 建议使用 Postman 或类似的 API 测试工具进行测试
+- 可以访问 /docs 获取更详细的 API 文档
+- 在开发环境中启用了热重载，修改代码后服务器会自动重启 
