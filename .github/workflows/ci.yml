@@ -36,7 +36,7 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./backend/coverage.xml
         flags: backend
-        fail_ci_if_error: true
+        name: backend-coverage
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -55,19 +55,18 @@ jobs:
       working-directory: ./frontend
       run: |
         npm install --legacy-peer-deps
-        npm install -D @vitest/coverage-v8 --legacy-peer-deps
       
     - name: Run tests with coverage
       working-directory: ./frontend
-      run: npm test -- --coverage
+      run: npm run test:coverage
       
     - name: Upload frontend coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        directory: ./frontend/coverage
+        files: ./frontend/coverage/coverage.json
         flags: frontend
-        fail_ci_if_error: true
+        name: frontend-coverage
 
   build:
     needs: [backend-tests, frontend-tests]
